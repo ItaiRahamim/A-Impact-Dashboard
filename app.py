@@ -805,6 +805,7 @@ with t4:
         "סכום_תיק":"שווי תיק","הכנסה_חודשית":"הכנסה/חודש",
         "מספר_פניות_שנה_אחרונה":"פניות/שנה",
     })
+    top20["ציון סיכון"] = top20["ציון סיכון"].astype(int)
 
     def col_risk(v):
         if v >= 60: return "background-color:#fee2e2;color:#dc2626;font-weight:700"
