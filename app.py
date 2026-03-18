@@ -613,13 +613,16 @@ with t3:
                 ids=c_ids + s_ids,
                 customdata=c_hover + s_hover,
                 hovertemplate="%{customdata}<extra></extra>",
+                branchvalues="total",
                 marker=dict(
                     colors=all_vals,
                     colorscale=[[0,"#dbeafe"],[1,"#1d4ed8"]],
                     showscale=False,
+                    pad=dict(t=16, l=1, r=1, b=1),
                 ),
+                tiling=dict(pad=0),
             ))
-            fig.update_layout(height=340, margin=dict(l=0,r=0,t=0,b=0),
+            fig.update_layout(height=380, margin=dict(l=0,r=0,t=0,b=0),
                               hoverlabel=HOVER_LABEL)
             st.plotly_chart(fig, use_container_width=True)
 
