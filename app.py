@@ -820,7 +820,7 @@ with t4:
               .map(col_risk, subset=["ציון סיכון"])
               .map(col_sat,  subset=["שב\"ר"])
               .format({"שווי תיק":"₪{:,.0f}","הכנסה/חודש":"₪{:,.0f}",
-                       "זמן תגובה":"{:.1f}"}))
+                       "זמן תגובה":"{:.1f}","ציון סיכון":"{:.0f}"}))
     st.dataframe(styled, use_container_width=True, height=480)
 
 
