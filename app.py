@@ -164,7 +164,15 @@ def filt(data):
     if sel_status  != "הכל": d = d[d["סטטוס"]     == sel_status]
     return d
 
-F = filt(df)
+def filt_churn(data):
+    """City + service filters only — churn charts always need both statuses."""
+    d = data.copy()
+    if sel_city    != "הכל": d = d[d["עיר"]       == sel_city]
+    if sel_service != "הכל": d = d[d["סוג_שירות"] == sel_service]
+    return d
+
+F  = filt(df)
+FC = filt_churn(df)   # used for every churn-rate chart
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -254,7 +262,7 @@ with t1:
 
     with ca:
         st.markdown('<p class="sec-title">נטישה לאורך זמן (רבעוני)</p>', unsafe_allow_html=True)
-        churned_f = F[F["תאריך_נטישה"].notna()].copy()
+        churned_f = FC[FC["תאריך_נטישה"].notna()].copy()
         if not churned_f.empty:
             churned_f["רבעון"] = churned_f["תאריך_נטישה"].dt.to_period("Q").astype(str)
             ct = churned_f.groupby("רבעון").size().reset_index(name="נוטשים")
@@ -310,7 +318,7 @@ with t1:
 
     with cc:
         st.markdown('<p class="sec-title">שביעות רצון — פעילים vs נוטשים</p>', unsafe_allow_html=True)
-        sat_d = (F.groupby(["שביעות_רצון","סטטוס"]).size().reset_index(name="כמות"))
+        sat_d = (FC.groupby(["שביעות_רצון","סטטוס"]).size().reset_index(name="כמות"))
         fig = go.Figure()
         for status, color in [("פעיל", CA),("לא פעיל", CC)]:
             d = sat_d[sat_d["סטטוס"]==status].copy()
@@ -337,7 +345,7 @@ with t1:
 
     with cd:
         st.markdown('<p class="sec-title">שיעור נטישה לפי ציון שביעות רצון</p>', unsafe_allow_html=True)
-        cs_sat = (F.groupby("שביעות_רצון")["churn"]
+        cs_sat = (FC.groupby("שביעות_רצון")["churn"]
                   .mean().mul(100).round(1).reset_index())
         cs_sat.columns = ["ציון","נטישה"]
         colors = [CC if v>38 else AM if v>33 else GR for v in cs_sat["נטישה"]]
@@ -386,7 +394,7 @@ with t2:
 
     with ca:
         st.markdown('<p class="sec-title">שיעור נטישה לפי סוג שירות</p>', unsafe_allow_html=True)
-        cs_svc = (F.groupby("סוג_שירות")["churn"].mean()
+        cs_svc = (FC.groupby("סוג_שירות")["churn"].mean()
                   .mul(100).round(1).reset_index().sort_values("churn"))
         cs_svc.columns = ["שירות","נטישה"]
         bar_c = [CC if v>38 else AM if v>33 else GR for v in cs_svc["נטישה"]]
@@ -412,7 +420,7 @@ with t2:
 
     with cb:
         st.markdown('<p class="sec-title">שיעור נטישה לפי עיר</p>', unsafe_allow_html=True)
-        cs_city = (F.groupby("עיר")["churn"].mean()
+        cs_city = (FC.groupby("עיר")["churn"].mean()
                    .mul(100).round(1).reset_index().sort_values("churn"))
         cs_city.columns = ["עיר","נטישה"]
         bar_c2 = [CC if v>42 else AM if v>35 else GR for v in cs_city["נטישה"]]
@@ -440,7 +448,7 @@ with t2:
     st.markdown('<p class="sec-title">מפת חום — שיעור נטישה (%) לפי סוג שירות × עיר</p>',
                 unsafe_allow_html=True)
     st.caption("ירוק = נטישה נמוכה | צהוב = בינוני | אדום = נטישה גבוהה")
-    hm = (df.groupby(["סוג_שירות","עיר"])["churn"]
+    hm = (FC.groupby(["סוג_שירות","עיר"])["churn"]
           .mean().mul(100).round(1).unstack(fill_value=0))
     # Build customdata as list of lists of tuples (service, city, pct)
     hm_cd = [
@@ -479,7 +487,7 @@ with t2:
     with ce:
         st.markdown('<p class="sec-title">נטישה לפי ותק לקוח (חודשים עד עזיבה)</p>',
                     unsafe_allow_html=True)
-        dc = df[df["churn"]==1].copy()
+        dc = FC[FC["churn"]==1].copy()
         dc["ותק"] = (dc["tenure_days"]/30).round(0).astype(int)
         bins = pd.cut(dc["ותק"], bins=[0,3,6,12,24,48,200],
                       labels=["0–3","3–6","6–12","12–24","24–48","48+"])
@@ -507,7 +515,7 @@ with t2:
     with cf:
         st.markdown('<p class="sec-title">שיעור נטישה לפי קבוצת גיל</p>',
                     unsafe_allow_html=True)
-        df2 = F.copy()
+        df2 = FC.copy()
         df2["גיל_קבוצה"] = pd.cut(df2["גיל"], bins=[24,34,44,54,64,73],
                                    labels=["25–34","35–44","45–54","55–64","65–72"])
         ac = (df2.groupby("גיל_קבוצה", observed=True)["churn"]
