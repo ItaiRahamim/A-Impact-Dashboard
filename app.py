@@ -624,6 +624,8 @@ with t3:
                 customdata=c_hover + s_hover,
                 hovertemplate="%{customdata}<extra></extra>",
                 branchvalues="total",
+                text=c_labels + [""]*len(s_labels),
+                textinfo="text",
                 marker=dict(
                     colors=c_colors + s_colors,
                     showscale=False,
