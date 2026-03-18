@@ -753,13 +753,9 @@ with t4:
             marker_colors=[CC, AM, GR],
             textinfo="percent+label",
             textfont_size=13,
-            customdata=list(zip(
-                pie["רמה"].tolist(),
-                pie["כמות"].astype(str).tolist(),
-            )),
             hovertemplate=_hover_tpl(
-                "רמת סיכון: %{customdata[0]}",
-                "מספר לקוחות: <span dir='ltr'>%{customdata[1]}</span>",
+                "רמת סיכון: %{label}",
+                "מספר לקוחות: <span dir='ltr'>%{value:,}</span>",
                 "אחוז: <span dir='ltr'>%{percent}</span>",
             ),
         )])
