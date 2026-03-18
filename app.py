@@ -583,6 +583,14 @@ with t3:
                 .groupby(["עיר","סוג_שירות"])["הכנסה_חודשית"].sum().reset_index())
         tree.columns = ["עיר","שירות","הכנסה"]
         if not tree.empty:
+            # Unique color per service type
+            SVC_PALETTE = ["#3b82f6","#ef4444","#22c55e","#f59e0b",
+                           "#8b5cf6","#06b6d4","#ec4899","#a16207"]
+            services    = sorted(tree["שירות"].unique())
+            svc_color   = {s: SVC_PALETTE[i % len(SVC_PALETTE)]
+                           for i, s in enumerate(services)}
+            CITY_COLOR  = "#1e293b"   # dark slate for city header tiles
+
             city_totals = tree.groupby("עיר")["הכנסה"].sum()
             # city-level nodes
             c_labels  = list(city_totals.index)
@@ -594,6 +602,7 @@ with t3:
                              f"הכנסה חודשית: <span dir='ltr'>₪{v/1000:.0f}K</span>",
                          ).replace("<extra></extra>","")
                          for c, v in zip(c_labels, c_values)]
+            c_colors  = [CITY_COLOR] * len(c_labels)
             # service-level nodes
             s_labels  = list(tree["שירות"])
             s_parents = list(tree["עיר"])
@@ -605,18 +614,18 @@ with t3:
                              f"הכנסה חודשית: <span dir='ltr'>₪{r['הכנסה']/1000:.0f}K</span>",
                          ).replace("<extra></extra>","")
                          for _, r in tree.iterrows()]
-            all_vals = c_values + s_values
+            s_colors  = [svc_color[r["שירות"]] for _, r in tree.iterrows()]
+
             fig = go.Figure(go.Treemap(
                 labels=c_labels + s_labels,
                 parents=c_parents + s_parents,
-                values=all_vals,
+                values=c_values + s_values,
                 ids=c_ids + s_ids,
                 customdata=c_hover + s_hover,
                 hovertemplate="%{customdata}<extra></extra>",
                 branchvalues="total",
                 marker=dict(
-                    colors=all_vals,
-                    colorscale=[[0,"#dbeafe"],[1,"#1d4ed8"]],
+                    colors=c_colors + s_colors,
                     showscale=False,
                     pad=dict(t=16, l=1, r=1, b=1),
                 ),
@@ -625,6 +634,20 @@ with t3:
             fig.update_layout(height=380, margin=dict(l=0,r=0,t=0,b=0),
                               hoverlabel=HOVER_LABEL)
             st.plotly_chart(fig, use_container_width=True)
+
+            # Legend
+            items = "".join(
+                f'<span style="display:inline-flex;align-items:center;gap:5px;'
+                f'margin:3px 10px 3px 0;">'
+                f'<span style="display:inline-block;width:13px;height:13px;'
+                f'border-radius:3px;background:{svc_color[s]};flex-shrink:0;"></span>'
+                f'<span style="font-size:.78rem;color:#374151;">{s}</span></span>'
+                for s in services
+            )
+            st.markdown(
+                f'<div style="display:flex;flex-wrap:wrap;padding:4px 2px 2px;">{items}</div>',
+                unsafe_allow_html=True,
+            )
 
     cc3,cd3 = st.columns(2)
 
