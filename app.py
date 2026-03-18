@@ -12,11 +12,27 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── CSS ──────────────────────────────────────────────────────────────────────
+# ── CSS + RTL bootstrap ───────────────────────────────────────────────────────
 st.markdown("""
 <style>
-html, body, [class*="css"]      { direction: rtl; }
-.stApp                          { background-color: #f4f6fb; }
+/* RTL base — most reliable cross-browser approach */
+html, body { direction: rtl !important; }
+/* Cover Streamlit's dynamically-generated class names AND key test-ids */
+[class*="css"], [class*="st-"],
+[data-testid="stAppViewContainer"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="stMarkdownContainer"],
+[data-testid="stMetricLabel"],
+[data-testid="stMetricValue"],
+[data-testid="stMetricDelta"],
+[data-baseweb="tab"],
+[data-baseweb="tab-list"],
+[data-baseweb="select"],
+[data-baseweb="menu"]           { direction: rtl !important; }
+
+.stApp                          { background-color: #f4f6fb; direction: rtl !important; }
 [data-testid="metric-container"]{ background:#fff; border-radius:12px;
                                    padding:16px 20px; border:1px solid #e5e7eb;
                                    box-shadow:0 1px 3px rgba(0,0,0,.06); }
@@ -90,12 +106,16 @@ def _fmt_kpi(v):
     return f"₪{int(v):,}"
 
 def _hover_tpl(*lines):
-    lri, rli, pdi = "\u2066", "\u2067", "\u2069"  # LTR isolate, RTL isolate, pop isolate
-    normalized = []
+    # Use Unicode 1.0 embedding chars (RLE/LRE/PDF) — supported in ALL browsers
+    # including Safari's SVG text engine, unlike the newer bidi isolates (U+2066-2069).
+    RLE, LRE, PDF = "\u202b", "\u202a", "\u202c"
+    result = []
     for line in lines:
-        ln = line.replace("<span dir='ltr'>", lri).replace("</span>", pdi)
-        normalized.append(f"{rli}{ln}{pdi}")
-    return "<br>".join(normalized) + "<extra></extra>"
+        # <span dir='ltr'>…</span>  →  LRE … PDF  (force LTR for numbers)
+        ln = line.replace("<span dir='ltr'>", LRE).replace("</span>", PDF)
+        # Wrap entire line in RTL embedding so label appears on right
+        result.append(f"{RLE}{ln}{PDF}")
+    return "<br>".join(result) + "<extra></extra>"
 
 # ── Data ─────────────────────────────────────────────────────────────────────
 @st.cache_data
@@ -272,7 +292,7 @@ with t1:
             textfont=dict(color="white", size=12),
             customdata=list(zip(
                 rev_s["שירות"].tolist(),
-                [f"₪{v:,.0f}" for v in rev_s["הכנסה"]],
+                [f"₪{v/1000:.0f}K" for v in rev_s["הכנסה"]],
             )),
             hovertemplate=_hover_tpl(
                 "סוג שירות: %{customdata[0]}",
@@ -542,7 +562,7 @@ with t3:
                 customdata=list(zip(
                     d["שירות"].tolist(),
                     [status]*len(d),
-                    [f"₪{v:,.0f}" for v in d["ממוצע_תיק"]],
+                    [f"₪{v/1000:.0f}K" for v in d["ממוצע_תיק"]],
                 )),
                 hovertemplate=_hover_tpl(
                     "סוג שירות: %{customdata[0]}",
@@ -563,7 +583,7 @@ with t3:
                 .groupby(["עיר","סוג_שירות"])["הכנסה_חודשית"].sum().reset_index())
         tree.columns = ["עיר","שירות","הכנסה"]
         if not tree.empty:
-            tree["הכנסה_fmt"] = tree["הכנסה"].apply(lambda v: f"₪{v:,.0f}")
+            tree["הכנסה_fmt"] = tree["הכנסה"].apply(lambda v: f"₪{v/1000:.0f}K")
             fig = px.treemap(
                 tree, path=["עיר","שירות"], values="הכנסה",
                 color="הכנסה",
