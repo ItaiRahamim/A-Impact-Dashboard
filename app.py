@@ -583,22 +583,43 @@ with t3:
                 .groupby(["עיר","סוג_שירות"])["הכנסה_חודשית"].sum().reset_index())
         tree.columns = ["עיר","שירות","הכנסה"]
         if not tree.empty:
-            tree["הכנסה_fmt"] = tree["הכנסה"].apply(lambda v: f"₪{v/1000:.0f}K")
-            fig = px.treemap(
-                tree, path=["עיר","שירות"], values="הכנסה",
-                color="הכנסה",
-                color_continuous_scale=[[0,"#dbeafe"],[1,"#1d4ed8"]],
-                custom_data=["עיר","שירות","הכנסה_fmt"],
-            )
-            fig.update_traces(
-                hovertemplate=_hover_tpl(
-                    "עיר: %{customdata[0]}",
-                    "סוג שירות: %{customdata[1]}",
-                    "הכנסה חודשית: <span dir='ltr'>%{customdata[2]}</span>",
-                )
-            )
+            city_totals = tree.groupby("עיר")["הכנסה"].sum()
+            # city-level nodes
+            c_labels  = list(city_totals.index)
+            c_parents = [""] * len(c_labels)
+            c_values  = list(city_totals.values)
+            c_ids     = c_labels[:]
+            c_hover   = [_hover_tpl(
+                             f"עיר: {c}",
+                             f"הכנסה חודשית: <span dir='ltr'>₪{v/1000:.0f}K</span>",
+                         ).replace("<extra></extra>","")
+                         for c, v in zip(c_labels, c_values)]
+            # service-level nodes
+            s_labels  = list(tree["שירות"])
+            s_parents = list(tree["עיר"])
+            s_values  = list(tree["הכנסה"])
+            s_ids     = [f"{r['עיר']}/{r['שירות']}" for _, r in tree.iterrows()]
+            s_hover   = [_hover_tpl(
+                             f"עיר: {r['עיר']}",
+                             f"סוג שירות: {r['שירות']}",
+                             f"הכנסה חודשית: <span dir='ltr'>₪{r['הכנסה']/1000:.0f}K</span>",
+                         ).replace("<extra></extra>","")
+                         for _, r in tree.iterrows()]
+            all_vals = c_values + s_values
+            fig = go.Figure(go.Treemap(
+                labels=c_labels + s_labels,
+                parents=c_parents + s_parents,
+                values=all_vals,
+                ids=c_ids + s_ids,
+                customdata=c_hover + s_hover,
+                hovertemplate="%{customdata}<extra></extra>",
+                marker=dict(
+                    colors=all_vals,
+                    colorscale=[[0,"#dbeafe"],[1,"#1d4ed8"]],
+                    showscale=False,
+                ),
+            ))
             fig.update_layout(height=340, margin=dict(l=0,r=0,t=0,b=0),
-                              coloraxis_showscale=False,
                               hoverlabel=HOVER_LABEL)
             st.plotly_chart(fig, use_container_width=True)
 
